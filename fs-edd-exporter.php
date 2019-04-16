@@ -302,7 +302,7 @@
                     }
 
                     // Billing fields.
-                    $tax_id  = $this->get_tax_id( $payment, $download );
+                    $tax_id  = $this->get_tax_id( $payment, $customer );
                     $address = $this->get_customer_address( $payment, $customer );
 
                     fputcsv( $fp, array(
@@ -565,38 +565,34 @@
          * @since  1.0.0
          *
          * @param EDD_Payment  $edd_payment
-         * @param EDD_Download $edd_download
          *
          * @return array
          */
-        private function get_tax_id( EDD_Payment $edd_payment, EDD_Download $edd_download ) {
-            if ( isset( $edd_payment->cart_details ) &&
-                 is_array( $edd_payment->cart_details ) &&
-                 1 < count( $edd_payment->cart_details )
-            ) {
-                /**
-                 * Purchased multiple products in the same cart, find the gross & tax paid for the
-                 * product associated with the license.
-                 */
-                $cart                      = $edd_payment->cart_details;
-                $context_edd_download_name = $edd_download->get_name();
-                foreach ( $cart as $edd_download ) {
-                    if ( $context_edd_download_name === $edd_download['name'] ) {
-                        if ( is_numeric( $edd_download['tax'] ) && $edd_download['tax'] > 0 ) {
-                            return $edd_download['tax'];
-                        }
-                    }
-                }
-            } else {
-                /**
-                 * Purchased only one product, get the tax directly from the total payment.
-                 */
-                if ( is_numeric( $edd_payment->tax ) && $edd_payment->tax > 0 ) {
-                    return $edd_payment->tax;
+        private function get_tax_id( EDD_Payment $edd_payment, EDD_Customer $edd_customer ) {
+            if ( is_object( $edd_payment ) ) {
+                $user_info = edd_get_payment_meta_user_info( $edd_payment->ID );
+
+                if ( is_array( $user_info ) && ! empty( $user_info['vat_number'] ) ) {
+                    // Check if the payment's meta has the VAT ID.
+                    return $user_info['vat_number'];
                 }
             }
 
-            return '';
+            if ( class_exists( '\lyquidity\edd_vat\Actions' ) ) {
+                // Otherwise, try to pull the VAT ID from the user info.
+                if ( ! empty( $edd_customer->user_id ) ) {
+                    $vat_id = \lyquidity\edd_vat\Actions::instance()->get_vat_number(
+                        '',
+                        $edd_customer->user_id
+                    );
+
+                    if ( ! empty( $vat_id ) ) {
+                        return $vat_id;
+                    }
+                }
+            }
+
+            return null;
         }
 
         /**
