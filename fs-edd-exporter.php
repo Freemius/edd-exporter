@@ -126,6 +126,12 @@
             // Add cookies to trigger request with same user access permissions.
             $cookies = array();
             foreach ( $_COOKIE as $name => $value ) {
+                if (0 === strpos( $name, 'tk_') ||
+                    0 === strpos( $name, 'mp_')
+                ) {
+                    continue;
+                }
+
                 $cookies[] = new WP_Http_Cookie( array(
                     'name'  => $name,
                     'value' => $value
