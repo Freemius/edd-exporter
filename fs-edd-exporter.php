@@ -219,7 +219,7 @@
                     } else {
                         $license_id = $license_or_id;
 
-                        $license = new EDD_SL_License( $license_id );
+                        $license = get_post( $license_id );
 
                         if ( ! is_object( $license ) ) {
                             continue;
@@ -238,12 +238,14 @@
                         continue;
                     }
 
+                    $payment_ids = get_post_meta( $license_id, '_edd_sl_payment_id' );
+
                     if ( $is_new_sl_version ) {
                         $customer_id        = $license->customer_id;
                         $initial_payment_id = $license->payment_id;
                     } else {
                         $last_license_payments = edd_get_payments( array(
-                            'post__in' => $license->payment_ids,
+                            'post__in' => $payment_ids,
                             'number'   => 1,
                             'status'   => array( 'publish' ),
                             'order'    => 'DESC',
