@@ -198,6 +198,8 @@
 
             $is_new_sl_version = isset( $this->_edd_sl->licenses_db );
 
+            $is_old_sl_version = ( ! $is_new_sl_version && ! class_exists('EDD_SL_License') );
+
             if ( $is_new_sl_version ) {
                 $licenses_or_ids = $this->_edd_sl->licenses_db->get_licenses( array(
                     'number' => $limit,
@@ -225,7 +227,9 @@
                     } else {
                         $license_id = $license_or_id;
 
-                        $license = new EDD_SL_License( $license_id );
+                        $license = $is_old_sl_version ?
+                            get_post( $license_id ) :
+                            new EDD_SL_License( $license_id );
 
                         if ( ! is_object( $license ) ) {
                             continue;
@@ -248,8 +252,12 @@
                         $customer_id        = $license->customer_id;
                         $initial_payment_id = $license->payment_id;
                     } else {
+                        $payment_ids = $is_old_sl_version ?
+                            get_post_meta( $license_id, '_edd_sl_payment_id' ) :
+                            $license->payment_ids;
+
                         $last_license_payments = edd_get_payments( array(
-                            'post__in' => $license->payment_ids,
+                            'post__in' => $payment_ids,
                             'number'   => 1,
                             'status'   => array( 'publish' ),
                             'order'    => 'DESC',
