@@ -204,6 +204,8 @@
                 $licenses_or_ids = $this->_edd_sl->licenses_db->get_licenses( array(
                     'number' => $limit,
                     'offset' => $offset,
+                    // If you only need to export the licenses data of a subset of the products/downloads.
+                    // 'download_id' => array( <DOWNLOAD_ID_1>, ..., <DOWNLOAD_ID_N> ),
                 ) );
             } else {
                 $licenses_or_ids = $wpdb->get_col( "SELECT post_id FROM $wpdb->postmeta WHERE meta_key = '_edd_sl_key' LIMIT {$offset},{$limit}" );
