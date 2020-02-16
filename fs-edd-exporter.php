@@ -126,6 +126,12 @@
             // Add cookies to trigger request with same user access permissions.
             $cookies = array();
             foreach ( $_COOKIE as $name => $value ) {
+                if (0 === strpos( $name, 'tk_') ||
+                    0 === strpos( $name, 'mp_')
+                ) {
+                    continue;
+                }
+
                 $cookies[] = new WP_Http_Cookie( array(
                     'name'  => $name,
                     'value' => $value
@@ -192,10 +198,14 @@
 
             $is_new_sl_version = isset( $this->_edd_sl->licenses_db );
 
+            $is_old_sl_version = ( ! $is_new_sl_version && ! class_exists('EDD_SL_License') );
+
             if ( $is_new_sl_version ) {
                 $licenses_or_ids = $this->_edd_sl->licenses_db->get_licenses( array(
                     'number' => $limit,
                     'offset' => $offset,
+                    // If you only need to export the licenses data of a subset of the products/downloads.
+                    // 'download_id' => array( <DOWNLOAD_ID_1>, ..., <DOWNLOAD_ID_N> ),
                 ) );
             } else {
                 $licenses_or_ids = $wpdb->get_col( "SELECT post_id FROM $wpdb->postmeta WHERE meta_key = '_edd_sl_key' LIMIT {$offset},{$limit}" );
@@ -219,7 +229,9 @@
                     } else {
                         $license_id = $license_or_id;
 
-                        $license = new EDD_SL_License( $license_id );
+                        $license = $is_old_sl_version ?
+                            get_post( $license_id ) :
+                            new EDD_SL_License( $license_id );
 
                         if ( ! is_object( $license ) ) {
                             continue;
@@ -242,8 +254,12 @@
                         $customer_id        = $license->customer_id;
                         $initial_payment_id = $license->payment_id;
                     } else {
+                        $payment_ids = $is_old_sl_version ?
+                            get_post_meta( $license_id, '_edd_sl_payment_id' ) :
+                            $license->payment_ids;
+
                         $last_license_payments = edd_get_payments( array(
-                            'post__in' => $license->payment_ids,
+                            'post__in' => $payment_ids,
                             'number'   => 1,
                             'status'   => array( 'publish' ),
                             'order'    => 'DESC',
